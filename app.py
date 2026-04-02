@@ -72,7 +72,7 @@ with col2:
     st.metric(label="Expected Goals (xG) Probability", value=f"{probability:.1f}%")
     
     # --- 6. DRAW THE FIELD VISUALIZATION ---
-    fig, ax = st.subplots(figsize=(6, 5))
+    fig, ax = plt.subplots(figsize=(6, 5))
     ax.set_facecolor('#4CAF50') # Grass Green
     
     # Draw Goal Line and Crease
