@@ -13,7 +13,7 @@ st.markdown("Adjust the player's position and mechanics to see how the mathemati
 @st.cache_resource
 def load_model():
     model = xgb.XGBClassifier()
-    model.load_model("lacrosse_xg_engine.json") # Loads the file you saved
+    model.load_model("lacrosse_xg_engine.json") # Ensure this file is in your GitHub repo!
     return model
 
 xg_model = load_model()
@@ -50,7 +50,6 @@ is_under = 1 if motion == "Underhand" else 0
 is_unk = 1 if motion == "Unknown" else 0
 
 # Build the exact array the XGBoost model expects
-# NOTE: Make sure this exact order matches your X_test columns!
 input_data = pd.DataFrame([[
     distance, abs(angle), hands_val, feet_val, 
     spatial_danger, shooter_mechanics, 
@@ -73,13 +72,13 @@ with col2:
     
     # --- 6. DRAW THE FIELD VISUALIZATION ---
     fig, ax = plt.subplots(figsize=(6, 5))
-    ax.set_facecolor('#4CAF50') # Grass Green
+    ax.set_facecolor('#4CAF50') # Grass Green background
     
     # Draw Goal Line and Crease
-    ax.plot([-10, 10], [0, 0], color='white', linewidth=3) # Goal line
-    crease = plt.Circle((0, 0), 3, color='white', fill=False, linewidth=2)
+    ax.plot([-15, 15], [0, 0], color='white', linewidth=3, zorder=1) # Goal line
+    crease = plt.Circle((0, 0), 3, color='white', fill=False, linewidth=2, zorder=2)
     ax.add_patch(crease)
-    ax.plot([-1, 1], [0, 0], color='orange', linewidth=4) # The Net
+    ax.plot([-1, 1], [0, 0], color='orange', linewidth=5, zorder=3) # The Net
     
     # Calculate player X/Y coordinates using basic trigonometry
     # Convert angle to radians. If angle is negative, they are on the left.
@@ -87,9 +86,11 @@ with col2:
     player_x = distance * np.sin(rad_angle)
     player_y = distance * np.cos(rad_angle)
     
-    # Plot the player
-    ax.scatter(player_x, player_y, color='red', s=200, zorder=5, label="Shooter")
-    ax.plot([player_x, 0], [player_y, 0], color='white', linestyle='--', alpha=0.5) # Shot trajectory
+    # Draw the dashed trajectory line FROM the player TO the net (0,0)
+    ax.plot([player_x, 0], [player_y, 0], color='white', linestyle='--', linewidth=2, zorder=4)
+    
+    # Plot the player (Red dot)
+    ax.scatter(player_x, player_y, color='red', s=250, zorder=5, edgecolors='black')
     
     # Format the graph
     ax.set_xlim(-15, 15)
