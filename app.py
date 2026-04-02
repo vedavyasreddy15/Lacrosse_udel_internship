@@ -13,7 +13,7 @@ st.markdown("Adjust the player's position and mechanics to see how the mathemati
 @st.cache_resource
 def load_model():
     model = xgb.XGBClassifier()
-    model.load_model("lacrosse_xg_engine.json") # Ensure this file is in your GitHub repo!
+    model.load_model("lacrosse_xg_engine.json") 
     return model
 
 xg_model = load_model()
@@ -63,50 +63,53 @@ with col2:
     st.header("Model Output")
     st.metric(label="Expected Goals (xG) Probability", value=f"{probability:.1f}%")
     
-    # --- 6. DRAW THE ADVANCED FIELD VISUALIZATION ---
-    fig, ax = plt.subplots(figsize=(7, 6))
+    # --- 6. DRAW THE HIGH-FIDELITY FIELD VISUALIZATION ---
+    fig, ax = plt.subplots(figsize=(8, 7))
     ax.set_facecolor('#4CAF50') # Grass Green
     
-    # 6a. Draw the Crease and Goal Line
-    ax.plot([-15, 15], [0, 0], color='white', linewidth=2, zorder=1) # Endline
+    # Field Boundaries
+    ax.plot([-20, 20], [0, 0], color='white', linewidth=3, zorder=1) # Endline
+    ax.plot([-20, -20], [-5, 25], color='white', linewidth=3, zorder=1) # Left Sideline
+    ax.plot([20, 20], [-5, 25], color='white', linewidth=3, zorder=1) # Right Sideline
+    ax.plot([-20, 20], [20, 20], color='white', linewidth=2, zorder=1) # Restraining Line
+    
+    # Crease
     crease = plt.Circle((0, 0), 3, color='white', fill=False, linewidth=2, zorder=2)
     ax.add_patch(crease)
     
-    # 6b. Draw the Realistic Net
-    # The back of the net (triangle mesh)
-    ax.fill([-1, 0, 1], [0, -2, 0], color='white', alpha=0.3, zorder=2)
-    ax.plot([-1, 0, 1], [0, -2, 0], color='white', linestyle=':', linewidth=2, zorder=3)
-    # The front orange pipes
-    ax.plot([-1, 1], [0, 0], color='orange', linewidth=4, zorder=4)
+    # Realistic Net (Mesh and Pipes)
+    ax.fill([-1, 0, 1], [0, -2, 0], color='white', alpha=0.4, zorder=2) # Mesh back
+    ax.plot([-1, 0, 1], [0, -2, 0], color='white', linestyle='-', linewidth=1, zorder=3)
+    ax.plot([-1, 1], [0, 0], color='orange', linewidth=5, zorder=4) # Front pipes
     
-    # Calculate player coordinates
+    # Calculate player coordinates based on sliders
     rad_angle = np.radians(angle)
     player_x = distance * np.sin(rad_angle)
     player_y = distance * np.cos(rad_angle)
     
-    # 6c. Draw the "Bad Angle" Shooting Cone (Visible Net)
-    # Shades the area from the player to the left post (-1) and right post (1)
-    ax.fill([player_x, -1, 1], [player_y, 0, 0], color='yellow', alpha=0.25, zorder=3, label='Visible Net')
+    # The "Visible Net" Cone (Yellow Shading)
+    ax.fill([player_x, -1, 1], [player_y, 0, 0], color='yellow', alpha=0.35, zorder=3)
     ax.plot([player_x, -1], [player_y, 0], color='yellow', linewidth=1, alpha=0.8, zorder=4)
     ax.plot([player_x, 1], [player_y, 0], color='yellow', linewidth=1, alpha=0.8, zorder=4)
     
-    # 6d. Draw the Trajectory Line (Black Dashed)
+    # The Trajectory Line (Dashed Black)
     ax.plot([player_x, 0], [player_y, 0], color='black', linestyle='--', linewidth=2, zorder=5)
     
-    # 6e. Draw the "Human" Top-Down Player
-    # Helmet (White with a blue stripe)
-    ax.scatter(player_x, player_y, color='white', edgecolors='#00539F', s=250, zorder=7, linewidth=2)
-    # Lacrosse Stick (Extending from player toward goal)
-    stick_end_x = player_x - 1.5 * np.sin(rad_angle)
-    stick_end_y = player_y - 1.5 * np.cos(rad_angle)
-    ax.plot([player_x, stick_end_x], [player_y, stick_end_y], color='silver', linewidth=3, zorder=6)
+    # The Human Player (Helmet)
+    ax.scatter(player_x, player_y, color='white', edgecolors='#00539F', s=300, zorder=7, linewidth=2)
     
-    # Format the graph
-    ax.set_xlim(-15, 15)
-    ax.set_ylim(-3, 22)
+    # The Lacrosse Stick (Pointing exactly at the center of the goal)
+    if distance > 0:
+        dir_x = -player_x / distance
+        dir_y = -player_y / distance
+        stick_end_x = player_x + dir_x * 1.5
+        stick_end_y = player_y + dir_y * 1.5
+        ax.plot([player_x, stick_end_x], [player_y, stick_end_y], color='silver', linewidth=4, zorder=6)
+    
+    # Format the graph limits to show the whole offensive zone
+    ax.set_xlim(-22, 22)
+    ax.set_ylim(-4, 23)
     ax.set_aspect('equal')
-    ax.axis('off')
+    ax.axis('off') # Hides the ugly graph numbers
     
     st.pyplot(fig)
-    
-    st.caption("*Notice how the yellow 'Visible Net' cone shrinks as the angle increases.*")
