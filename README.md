@@ -1,55 +1,70 @@
-# Lacrosse_udel_internship
-
-Lacrosse Expected Goals (xG) Predictive Engine
+🥍 Lacrosse Expected Goals (xG) Predictive Engine
 Author: Vedavyas Reddy Bommineni
+
 Tech Stack: Python, Pandas, XGBoost, SHAP, Streamlit
 
-Project Objective
-In professional and collegiate lacrosse, shot quality is traditionally evaluated using subjective "eye tests" and coaching biases. The objective of this project was to build a machine learning engine that calculates an objective Expected Goals (xG) metric—a mathematical probability (0-100%) of a shot scoring based strictly on the physical state of the field at the exact moment of release.
+1. Project Objective
+This project replaces subjective coaching "eye tests" with a mathematical probability engine. It calculates an objective Expected Goals (xG) metric (0% to 100%) for every shot taken, based strictly on the physical state of the field at the exact moment of release.
 
-By translating raw gameplay data into actionable percentages, this engine allows coaching staffs to optimize offensive shot selection, eliminate inefficient habits, and mathematically prove which techniques actually win games.
+Business Value for Coaching Staff:
 
-Data Pipeline & Feature Engineering
-The dataset consisted of roughly 1,500 historical shots. To optimize the model's accuracy, strict feature selection and engineering protocols were applied:
+Optimize offensive shot selection using hard data.
 
-1. Base Features (Included)
-Shot_Distance (Yards): The raw distance to the goal.
+Eliminate inefficient shooting habits.
 
-Shot_Angle (Degrees): The angle from the center of the goal, mapping the visible net.
+Mathematically prove which techniques actually result in goals.
 
-Hands_Free (Binary): Did the shooter have their arms free from defenders? (1 = Yes, 0 = No)
+2. Data Pipeline & Feature Engineering
+The model was trained on roughly 1,500 historical shots. Strict feature selection was applied to isolate physics from subjective opinions.
 
-Feet_Set (Binary): Was the shooter planted and balanced? (1 = Yes, 0 = No)
+Base Features (The Raw Data)
+Shot_Distance: Distance to the goal in yards.
 
-2. Excluded Features
-Fantastic_Four: A subjective team metric tracking the number of successful criteria (passes/movement) completed prior to the shot. Reason for exclusion: Data leakage and scope mismatch. "Fantastic Four" measures macro-team tactics and passing, while xG measures micro-shot physics. Furthermore, a great passing sequence ultimately results in the player getting their hands free and feet set. Including it alongside the base features would result in mathematical double-counting.
+Shot_Angle: Degrees off-center (maps the amount of visible net).
 
-3. Engineered Features (Lacrosse IQ)
-To help the shallow decision trees identify synergies, we engineered two interaction terms:
+Hands_Free: Did the shooter have free arms? (1 = Yes, 0 = No).
 
-Spatial_Danger (Distance × Angle): Combines distance and visible net to create a single threat metric.
+Feet_Set: Was the shooter balanced and planted? (1 = Yes, 0 = No).
 
-Shooter_Mechanics (Hands_Free × Feet_Set): A lethal multiplier indicating a player was completely unimpeded with perfect form (e.g., a time-and-room step-down shot).
+Engineered Features (Lacrosse IQ)
+Created to help the model find immediate synergies:
 
-4. Transformed Features
-Type_of_Motion (Overhand, Sidearm, Underhand): Machine learning models cannot process English text. This column was transformed using One-Hot Encoding into distinct binary columns (Type_of_Motion_over, Type_of_Motion_side, etc.) to prevent the model from assuming numerical hierarchy among shooting styles.
+Spatial_Danger (Distance × Angle): A single metric defining the geometric threat level.
 
-Model Architecture & Training
-The engine was built using XGBoost (Extreme Gradient Boosting). Because sports data is inherently chaotic and heavily imbalanced (missed shots vastly outnumber goals at a ratio of 2.53 to 1), strict hyperparameters were implemented to stabilize the learning curve and prevent extreme variance (overfitting):
+Shooter_Mechanics (Hands_Free × Feet_Set): A massive probability multiplier indicating perfect time-and-room shooting form.
 
-scale_pos_weight = 2.53: Forced the engine to study the minority class (Goals) by penalizing missed predictions.
+Transformed Features
+Type_of_Motion: One-Hot Encoded into binary columns (Overhand, Sidearm, Underhand) so the machine learning engine does not assume numerical hierarchy among shooting styles.
 
-max_depth = 3: Prevented the AI from building hyper-specific, illogical decision trees on a small dataset.
+Excluded Features
+Fantastic_Four: A subjective metric grading pre-shot passing sequences.
 
-learning_rate = 0.01 & n_estimators = 1000: Forced the engine to take slow, careful steps during gradient descent.
+Why we dropped it: Data Leakage & Subjectivity. xG measures the micro-physics of the shot itself. Fantastic Four measures macro-team tactics. Good passing sequences result in the player getting Hands_Free and Feet_Set. Including Fantastic Four would mathematically double-count these advantages and introduce human bias into a physics engine.
 
-subsample = 1.0 & colsample_bytree = 1.0: Disabled random data dropping, which acts as a stabilizer for smaller sports datasets.
+3. Model Architecture (XGBoost)
+The engine utilizes Extreme Gradient Boosting (XGBoost). Sports data is heavily imbalanced (missed shots vastly outnumber goals). The following hyperparameters were set to stabilize the learning curve:
 
-Explainability (SHAP Analysis)
-To ensure coaching buy-in, the model was unpacked using SHAP (SHapley Additive exPlanations). The SHAP audit definitively proved:
+scale_pos_weight = 2.53: Forces the AI to study goals heavily by penalizing missed predictions.
 
-Distance is King: Shot_Distance was the #1 mathematical driver of scoring probability.
+max_depth = 3: Restricts tree depth to prevent overfitting (the "Smiley Face" curve) on a smaller dataset.
 
-Mechanics Over Motion: Securing Hands_Free was the #2 driver.
+learning_rate = 0.01: Forces slow, highly-accurate steps during gradient descent.
 
-Form is Irrelevant: The specific Type_of_Motion (Overhand vs. Underhand) had an average SHAP impact of 0.000. The math proved that hand motion is statistically irrelevant to scoring success compared to field positioning.
+4. Model Insights (SHAP Analysis)
+The model was unpacked using SHAP (SHapley Additive exPlanations) to prove why the AI makes its decisions. The audit revealed three core truths:
+
+Distance is King: Shot_Distance is the #1 undisputed driver of scoring probability.
+
+Mechanics Over Motion: Securing Hands_Free is the #2 driver.
+
+Form is Irrelevant: Hand motion (Type_of_Motion) has an average SHAP impact of 0.000. The math proves that how a player flicks their wrists is statistically irrelevant compared to their positioning and mechanics.
+
+5. Interpreting the Output: The SHAP "Biggest Flaw" Quirk
+The generated output file (Tanner_Master_xG_Database.csv) translates the complex SHAP math into plain-English columns for coaches: Top Advantage and Biggest Flaw.
+
+Note on Relative Minimums:
+Because SHAP values are relative, the script is instructed to find the highest (Advantage) and lowest (Flaw) mathematical impact for every shot.
+
+On highly lethal, mathematically perfect shots (e.g., 85%+ xG), almost every feature generates a massive positive score. To populate the Biggest_Flaw column, the engine is forced to flag the lowest relative number. Therefore, it will frequently flag a microscopic mathematical penalty—such as a -0.001 deduction for a sidearm release—as the "Biggest Flaw."
+
+This is not a bug; it indicates the shot was executed so flawlessly that the engine had to scrape the bottom of the mathematical barrel to find a critique. If all SHAP values for a shot are strictly 0.0 or higher, the engine accurately outputs "Nothing hurt."
