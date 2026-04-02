@@ -5,7 +5,7 @@ import xgboost as xgb
 import matplotlib.pyplot as plt
 
 # --- 1. PAGE SETUP ---
-st.set_page_config(page_title="Lacrosse xG Simulator", layout="wide")
+st.set_page_config(page_title="Lacrosse xG Simulator", layout="wide", initial_sidebar_state="expanded")
 st.title("🥍 Lacrosse Expected Goals (xG) Simulator")
 st.markdown("Adjust the player's position and mechanics to see how the mathematics of the shot change in real-time.")
 
@@ -23,6 +23,7 @@ col1, col2 = st.columns([1, 2])
 
 with col1:
     st.header("Shot Parameters")
+    
     st.markdown("### Location")
     distance = st.slider("Shot Distance (Yards)", min_value=1.0, max_value=20.0, value=10.0, step=0.5)
     angle = st.slider("Shot Angle (Degrees)", min_value=-80, max_value=80, value=0, step=1)
@@ -65,51 +66,56 @@ with col2:
     
     # --- 6. DRAW THE HIGH-FIDELITY FIELD VISUALIZATION ---
     fig, ax = plt.subplots(figsize=(8, 7))
-    ax.set_facecolor('#4CAF50') # Grass Green
     
-    # Field Boundaries
-    ax.plot([-20, 20], [0, 0], color='white', linewidth=3, zorder=1) # Endline
-    ax.plot([-20, -20], [-5, 25], color='white', linewidth=3, zorder=1) # Left Sideline
-    ax.plot([20, 20], [-5, 25], color='white', linewidth=3, zorder=1) # Right Sideline
-    ax.plot([-20, 20], [20, 20], color='white', linewidth=2, zorder=1) # Restraining Line
+    # Deep Turf Green Background
+    ax.set_facecolor('#2E7D32') 
+    
+    # Field Boundaries (Crisp White)
+    ax.plot([-20, 20], [0, 0], color='#FFFFFF', linewidth=3, zorder=1) # Endline
+    ax.plot([-20, -20], [-5, 25], color='#FFFFFF', linewidth=3, zorder=1) # Left Sideline
+    ax.plot([20, 20], [-5, 25], color='#FFFFFF', linewidth=3, zorder=1) # Right Sideline
+    ax.plot([-20, 20], [20, 20], color='#FFFFFF', linewidth=2, zorder=1, alpha=0.7) # Restraining Line
     
     # Crease
-    crease = plt.Circle((0, 0), 3, color='white', fill=False, linewidth=2, zorder=2)
+    crease = plt.Circle((0, 0), 3, color='#FFFFFF', fill=False, linewidth=2, zorder=2)
     ax.add_patch(crease)
     
     # Realistic Net (Mesh and Pipes)
-    ax.fill([-1, 0, 1], [0, -2, 0], color='white', alpha=0.4, zorder=2) # Mesh back
-    ax.plot([-1, 0, 1], [0, -2, 0], color='white', linestyle='-', linewidth=1, zorder=3)
-    ax.plot([-1, 1], [0, 0], color='orange', linewidth=5, zorder=4) # Front pipes
+    ax.fill([-1, 0, 1], [0, -2, 0], color='#FFFFFF', alpha=0.15, zorder=2) # Translucent mesh
+    ax.plot([-1, 0, 1], [0, -2, 0], color='#FFFFFF', linestyle=':', linewidth=1.5, zorder=3)
+    ax.plot([-1, 1], [0, 0], color='#FF5722', linewidth=5, zorder=4) # Bright orange pipes
     
-    # Calculate player coordinates based on sliders
+    # Calculate player coordinates
     rad_angle = np.radians(angle)
     player_x = distance * np.sin(rad_angle)
     player_y = distance * np.cos(rad_angle)
     
-    # The "Visible Net" Cone (Yellow Shading)
-    ax.fill([player_x, -1, 1], [player_y, 0, 0], color='yellow', alpha=0.35, zorder=3)
-    ax.plot([player_x, -1], [player_y, 0], color='yellow', linewidth=1, alpha=0.8, zorder=4)
-    ax.plot([player_x, 1], [player_y, 0], color='yellow', linewidth=1, alpha=0.8, zorder=4)
+    # The "Visible Net" Cone (Vibrant Gold Shading)
+    ax.fill([player_x, -1, 1], [player_y, 0, 0], color='#FFD54F', alpha=0.35, zorder=3)
+    ax.plot([player_x, -1], [player_y, 0], color='#FFD54F', linewidth=1.5, alpha=0.9, zorder=4)
+    ax.plot([player_x, 1], [player_y, 0], color='#FFD54F', linewidth=1.5, alpha=0.9, zorder=4)
     
-    # The Trajectory Line (Dashed Black)
-    ax.plot([player_x, 0], [player_y, 0], color='black', linestyle='--', linewidth=2, zorder=5)
+    # The Trajectory Line (Dashed Dark Charcoal)
+    ax.plot([player_x, 0], [player_y, 0], color='#212121', linestyle='--', linewidth=2.5, zorder=5)
     
     # The Human Player (Helmet)
-    ax.scatter(player_x, player_y, color='white', edgecolors='#00539F', s=300, zorder=7, linewidth=2)
+    ax.scatter(player_x, player_y, color='#FFFFFF', edgecolors='#0D47A1', s=350, zorder=7, linewidth=2.5)
     
-    # The Lacrosse Stick (Pointing exactly at the center of the goal)
+    # The Lacrosse Stick (Sleek Silver pointing at goal)
     if distance > 0:
         dir_x = -player_x / distance
         dir_y = -player_y / distance
-        stick_end_x = player_x + dir_x * 1.5
-        stick_end_y = player_y + dir_y * 1.5
-        ax.plot([player_x, stick_end_x], [player_y, stick_end_y], color='silver', linewidth=4, zorder=6)
+        stick_end_x = player_x + dir_x * 1.8
+        stick_end_y = player_y + dir_y * 1.8
+        ax.plot([player_x, stick_end_x], [player_y, stick_end_y], color='#B0BEC5', linewidth=4, zorder=6, solid_capstyle='round')
     
-    # Format the graph limits to show the whole offensive zone
+    # Format the graph limits to show the whole offensive zone cleanly
     ax.set_xlim(-22, 22)
     ax.set_ylim(-4, 23)
     ax.set_aspect('equal')
-    ax.axis('off') # Hides the ugly graph numbers
+    ax.axis('off') # Clean borderless look
+    
+    # Ensure layout is tight and aesthetic
+    plt.tight_layout()
     
     st.pyplot(fig)
