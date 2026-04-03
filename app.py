@@ -4,10 +4,10 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Lacrosse xG Ensemble", layout="wide")
-st.title("🥍 Lacrosse xG Simulator (Physics Enforced)")
+st.set_page_config(page_title="Lacrosse xG Engine", layout="wide")
+st.title("🥍 Lacrosse xG Simulator (Production)")
 
-@st.cache_resource
+# Caching temporarily disabled to ensure the new model loads instantly
 def load_assets():
     model = joblib.load("xg.pkl")
     scaler = joblib.load("scaler.pkl")
@@ -30,6 +30,7 @@ with col1:
     st.markdown("### Motion")
     motion = st.selectbox("Type of Motion", ["Overhand", "Sidearm", "Underhand", "Unknown"])
 
+# --- PURE DATA PREP (No Multiplier Hacks Needed) ---
 hands_val = 1 if hands_free else 0
 feet_val = 1 if feet_set else 0
 challenged_val = 1 if challenged else 0
@@ -49,14 +50,13 @@ raw_data = np.array([[
 ]])
 
 scaled_data = scaler.transform(raw_data)
-
-# --- PURE ML PREDICTION (NO IF-ELSE HACKS) ---
 probability = ensemble_model.predict_proba(scaled_data)[0][1] * 100
 
 with col2:
     st.header("Model Output")
     st.metric(label="Expected Goals (xG)", value=f"{probability:.1f}%")
     
+    # Visual Field Plotting
     fig, ax = plt.subplots(figsize=(8, 7))
     ax.set_facecolor('#2E7D32') 
     ax.plot([-20, 20], [0, 0], color='white', linewidth=3, zorder=1)
