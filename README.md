@@ -1,64 +1,65 @@
-# 🥍 Lacrosse Expected Goals (xG) Predictive Engine
+# 🥍 Lacrosse Expected Goals (xG) Engine & MLOps Pipeline
 
 https://xgudelmenlacrosse.streamlit.app/
-**Author:** Vedavyas Reddy Bommineni  
-**Tech Stack:** Python, Pandas, XGBoost, SHAP, Streamlit
 
-## 1. Project Objective
-This project replaces subjective coaching "eye tests" with a mathematical probability engine. It calculates an objective **Expected Goals (xG)** metric (0% to 100%) for every shot taken, based strictly on the physical state of the field at the exact moment of release.
+## Project Overview
+This repository contains a production-grade Expected Goals (xG) machine learning model and an automated MLOps pipeline built for Division 1 Lacrosse analytics. The project transitions raw, biased shot data into a fully calibrated, interactive web application used by coaching staffs to evaluate offensive performance and shot quality.
 
-**Business Value for Coaching Staff:**
-* Optimize offensive shot selection using hard data.
-* Eliminate inefficient shooting habits.
-* Mathematically prove which techniques actually result in goals.
+**Author:** Vedavyas Bommineni | MS in Data Science, University of Delaware
 
 ---
 
-## 2. Data Pipeline & Feature Engineering
-The model was trained on roughly 1,500 historical shots. Strict feature selection was applied to isolate physics from subjective opinions.
+## 🧠 The Business Problem
+In lacrosse, predicting whether a single shot will result in a goal is highly volatile due to goalie performance, defensive pressure, and luck. Binary predictions (Goal/No Goal) fail to capture the true rhythm of an offense. 
 
-### Base Features (The Raw Data)
-* **`Shot_Distance`:** Distance to the goal in yards.
-* **`Shot_Angle`:** Degrees off-center (maps the amount of visible net).
-* **`Hands_Free`:** Did the shooter have free arms? (1 = Yes, 0 = No).
-* **`Feet_Set`:** Was the shooter balanced and planted? (1 = Yes, 0 = No).
-
-### Engineered Features (Lacrosse IQ)
-Created to help the model find immediate synergies:
-* **`Spatial_Danger` (`Distance` × `Angle`):** A single metric defining the geometric threat level.
-* **`Shooter_Mechanics` (`Hands_Free` × `Feet_Set`):** A massive probability multiplier indicating perfect time-and-room shooting form.
-
-### Transformed Features
-* **`Type_of_Motion`:** One-Hot Encoded into binary columns (Overhand, Sidearm, Underhand) so the machine learning engine does not assume numerical hierarchy among shooting styles.
-
-### Excluded Features
-* **`Fantastic_Four`:** A subjective metric grading pre-shot passing sequences. 
-  * *Why we dropped it:* **Data Leakage & Subjectivity.** xG measures the micro-physics of the shot itself. Fantastic Four measures macro-team tactics. Good passing sequences result in the player getting `Hands_Free` and `Feet_Set`. Including Fantastic Four would mathematically double-count these advantages and introduce human bias into a physics engine.
+**The Objective:** Build a probabilistic model that assigns a mathematical Expected Goal (xG) value to every shot based on spatial geometry, shooter mechanics, and defensive pressure, allowing coaches to measure *shot quality* independently of the *shot outcome*.
 
 ---
 
-## 3. Model Architecture (XGBoost)
-The engine utilizes **Extreme Gradient Boosting (XGBoost)**. Sports data is heavily imbalanced (missed shots vastly outnumber goals). The following hyperparameters were set to stabilize the learning curve:
-* `scale_pos_weight = 2.53`: Forces the AI to study goals heavily by penalizing missed predictions.
-* `max_depth = 3`: Restricts tree depth to prevent overfitting (the "Smiley Face" curve) on a smaller dataset.
-* `learning_rate = 0.01`: Forces slow, highly-accurate steps during gradient descent.
+## 📊 Data Challenges & Methodological Solutions
+
+### 1. The "Elite Bias" Problem (Class Imbalance)
+During initial exploratory data analysis (EDA), the model exhibited a severe bias, assigning a near 0.0% feature importance to defensive pressure (`Challenged`). 
+* **The Cause:** A "loud minority" of elite players in the dataset were consistently scoring heavily contested shots, tricking the algorithm into assuming defense was irrelevant.
+* **The Solution:** Implemented **Cost-Sensitive Learning**. I applied a custom sample weight multiplier (`3.0x`) specifically to missed, challenged shots. This mathematically forced the AI to respect the physical reality of defensive pressure, raising its feature importance to an accurate 12.6%.
+
+### 2. Algorithmic Selection: Why XGBoost?
+While testing complex architectures (including a Voting Classifier Tri-Engine combining Random Forest, Logistic Regression, and XGBoost), the ensemble model suffered from a "Dilution Effect," where weaker linear models dragged down the accuracy.
+* I selected a pure **XGBoost Classifier** for the production environment. It provided superior hyperparameter tuning, avoided overfitting, and, most importantly, offered high **explainability** for the coaching staff compared to a black-box ensemble.
+
+### 3. Hyperparameter Calibration
+To prevent the model from over-predicting goal totals, an automated hyperparameter tuning script was built to calibrate the `scale_pos_weight`. This ensures the sum of the predicted probabilities perfectly matches the natural baseline scoring rate of the dataset.
 
 ---
 
-## 4. Model Insights (SHAP Analysis)
-The model was unpacked using **SHAP (SHapley Additive exPlanations)** to prove *why* the AI makes its decisions. The audit revealed three core truths:
-1. **Distance is King:** `Shot_Distance` is the #1 undisputed driver of scoring probability.
-2. **Mechanics Over Motion:** Securing `Hands_Free` is the #2 driver.
-3. **Form is Irrelevant:** Hand motion (`Type_of_Motion`) has an average SHAP impact of 0.000. The math proves that how a player flicks their wrists is statistically irrelevant compared to their positioning and mechanics.
+## 🛡️ Validation & Stress Testing
+To prove the model's stability against chaotic real-world variance, the engine was subjected to a rigorous **10-Shuffle Cross-Validation Stress Test**. 
+
+* **Methodology:** 10 completely random, unstratified subsets of 153 shots (representing an average game volume) were hidden from the training data. The model was trained from scratch 10 times and forced to predict the total Expected Goals for the unseen 'vaults'.
+* **Results:** Despite actual goals swinging wildly from 32 to 51 across the random samples, the model's xG remained remarkably stable, calculating the underlying shot quality with an **average error of only ~1.8 to 4.9 goals** per simulated game.
 
 ---
 
-## 5. Interpreting the Output: The SHAP "Biggest Flaw" Quirk
-The generated output file (`Tanner_Master_xG_Database.csv`) translates the complex SHAP math into plain-English columns for coaches: **Top Advantage** and **Biggest Flaw**.
+## ⚙️ The MLOps Pipeline
+This project is built for continuous integration. Rather than manually retraining the model when new game data is collected, I engineered a master `pipeline.py` script.
 
-**Note on Relative Minimums:**
-Because SHAP values are relative, the script is instructed to find the highest (Advantage) and lowest (Flaw) mathematical impact for every shot. 
+**Features of the Pipeline:**
+1. **Automated Ingestion:** Reads and preprocesses new `.csv` data, instantly engineering features like `Spatial_Danger` and `Shooter_Mechanics`.
+2. **Self-Calibrating Training:** Applies the defensive sample weights and trains a fresh XGBoost brain.
+3. **Asset Deployment:** Automatically exports the updated `xg.pkl` (model) and `scaler.pkl` (standardizer) for immediate deployment to the Streamlit frontend.
 
-On highly lethal, mathematically perfect shots (e.g., 85%+ xG), almost every feature generates a massive positive score. To populate the `Biggest_Flaw` column, the engine is forced to flag the *lowest relative number*. Therefore, it will frequently flag a microscopic mathematical penalty—such as a `-0.001` deduction for a sidearm release—as the "Biggest Flaw." 
+---
 
-This is not a bug; it indicates the shot was executed so flawlessly that the engine had to scrape the bottom of the mathematical barrel to find a critique. If all SHAP values for a shot are strictly `0.0` or higher, the engine accurately outputs *"Nothing hurt."*
+## 💻 Tech Stack
+* **Machine Learning:** `XGBoost`, `Scikit-Learn`, `NumPy`
+* **Data Manipulation:** `Pandas`
+* **Deployment & UI:** `Streamlit`, `Matplotlib` (for spatial field rendering)
+* **Environment:** Python 3.x
+
+---
+
+## 🚀 How to Run the Application
+
+**1. Run the MLOps Pipeline (To train a fresh model):**
+```bash
+python pipeline.py
